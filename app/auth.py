@@ -1,5 +1,5 @@
 from passlib.context import CryptContext
-from fastapi import Depends
+from fastapi import Depends,HTTPException
 from app.model.user import User
 from app.database import get_db
 import jwt
@@ -32,7 +32,7 @@ def verify_hash(pwd,hash_pwd)->bool:
 def create_access_token(data:dict)-> str:
     payload=data.copy()
 
-    exp=datetime.now(timezone.utc)+ timedelta(
+    exp=datetime.now(timezone.utc) + timedelta(
         minutes=int(exp_time)
     )
 
@@ -44,15 +44,26 @@ def create_access_token(data:dict)-> str:
         algorithm
     )
 
-def create_user_jwt(cred:HTTPAuthorizationCredentials,db=Depends(session)):
+def create_user_jwt(cred:HTTPAuthorizationCredentials=Depends(session),db = Depends(get_db)):
     token =cred.credentials
-    data= jwt.decode(
-        token,
-        secret_key,
-        algorithm
-    )
-    user= db.get(User,data["id"])
-    return user
+    try:
+        data= jwt.decode(
+            token,
+            secret_key,
+            algorithm
+        )
+        user= db.get(User,data["id"])
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=401,
+            detail="invalid token"
+        )
+    except jwt.InvalidSignatureError:
+        raise HTTPException(
+            status_code=401,
+            detail="Expired Token"
+        )
 
 
 

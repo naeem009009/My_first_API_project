@@ -2,7 +2,7 @@ from fastapi import APIRouter,Depends,HTTPException
 from app.schemas.user import UserSchema,LoginSchema
 from app .database import get_db
 from app.model.user import User
-from app.auth import make_hash,verify_hash,create_access_token
+from app.auth import make_hash,verify_hash,create_access_token,create_user_jwt
 
 
 router=APIRouter(prefix="/auth",tags=["Authentication"])
@@ -38,3 +38,8 @@ def login(cred: LoginSchema,db=Depends(get_db)):
         "access_token":token,
         "token_type":"Bearer"
     }
+@router.get("/profile")
+def Verify_token(user=Depends(create_user_jwt),db=Depends(get_db)):
+    profile=db.get(User,user.id)
+    return profile
+
